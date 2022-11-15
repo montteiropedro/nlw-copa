@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./ERD.md"
+  erdDebug = true
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Pool {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId   String?  @db.Uuid
+  title     String
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  owner        User?         @relation(fields: [ownerId], references: [id])
+  participants Participant[]
+
+  @@map("pools")
+}
+
+model Participant {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @db.Uuid
+  poolId String @db.Uuid
+
+  user    User    @relation(fields: [userId], references: [id])
+  pool    Pool    @relation(fields: [poolId], references: [id])
+  guesses Guess[]
+
+  @@unique([userId, poolId])
+  @@map("participants")
+}
+
+model User {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  email     String   @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  participantingAt Participant[]
+  ownPools         Pool[]
+
+  @@map("users")
+}
+
+model Game {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date                  DateTime
+  firstTeamCountryCode  String
+  secondTeamCountryCode String
+
+  guesses Guess[]
+
+  @@map("games")
+}
+
+model Guess {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  participantId    String   @db.Uuid
+  gameId           String   @db.Uuid
+  firstTeamPoints  Int
+  secondTeamPoints Int
+  createdAt        DateTime @default(now())
+
+  participant Participant @relation(fields: [participantId], references: [id])
+  game        Game        @relation(fields: [gameId], references: [id])
+
+  @@map("guesses")
+}
